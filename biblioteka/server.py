@@ -1,3 +1,4 @@
+# -*- coding: utf8 -*-
 import math
 
 from mesa.visualization.ModularVisualization import ModularServer
@@ -51,6 +52,8 @@ def network_portrayal(G):
 network = NetworkModule(network_portrayal, 500, 500, library='d3')
 chart = ChartModule([{'Label': 'Czytelnia', 'Color': '#FF0000'},
                      {'Label': 'Kawiarnia', 'Color': '#008000'},
+                     {'Label': 'Chillout', 'Color': '#808000'},
+                     {'Label': 'Biuro', 'Color': '#008080'},
                      {'Label': 'Toaleta', 'Color': '#808080'}])
 
 

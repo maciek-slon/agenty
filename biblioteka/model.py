@@ -8,6 +8,7 @@ from mesa.time import RandomActivation
 from mesa.datacollection import DataCollector
 from mesa.space import NetworkGrid
 
+import numpy as np
 
 class State(Enum):
     DOING = 0
@@ -58,17 +59,15 @@ class VirusModel(Model):
         self.rooms[1] = {"name": "Chillout",  "rates": {"Relaks": 1}}
         self.rooms[2] = {"name": "Biuro",     "rates": {"Praca": 1.5}}
         self.rooms[3] = {"name": "Toaleta",   "rates": {"Toaleta": 90}}
-        self.rooms[4] = {"name": "Kawiarnia", "rates": {"Jedzenie": 12}}
+        self.rooms[4] = {"name": "Kawiarnia", "rates": {"Jedzenie": 12, "Kultura": 0.5}}
+
         collector_dict = {}
         for i, room in enumerate(self.rooms):
             collector_dict[self.rooms[i]["name"]] = lambda model, i=i: len(model.grid.get_cell_list_contents([i]))-1
+        self.datacollector = DataCollector(collector_dict)
 
         self.schedule = RandomActivation(self)
 
-        # self.datacollector = DataCollector({"Infected": number_infected,
-        #                                     "Susceptible": number_susceptible,
-        #                                     "Resistant": number_resistant})
-        self.datacollector = DataCollector(collector_dict)
 
         # Create agents 
         for i, node in enumerate(self.G.nodes()):
@@ -79,18 +78,41 @@ class VirusModel(Model):
             self.grid.place_agent(r, node)
 
         
-        a = HumanAgent(101, self, {"Toaleta": 60, "Jedzenie": 120}, {"Nauka": 150})
-        b = HumanAgent(102, self, {"Toaleta": 85, "Jedzenie": 90}, {"Praca": 400})
-        c = HumanAgent(103, self, {"Toaleta": 33, "Jedzenie": 240}, {"Nauka": 250, "Praca": 135})
-        self.schedule.add(a)
-        self.schedule.add(b)
-        self.schedule.add(c)
-        self.grid.place_agent(a, 1)
-        self.grid.place_agent(b, 1)
-        self.grid.place_agent(c, 1)
+        prob_needs = {"Jedzenie": [4, 0.6], "Toaleta": [2, 0.6], "Relaks": [5, 1]}
+        prob_studs = {"Nauka": [4, 2.0], "Praca": [0, 0.5], "Kultura": [0, 1.0]}
+        prob_works = {"Nauka": [0, 0.3], "Praca": [6, 1.0], "Kultura": [0, 0.2]}
+        prob_tours = {"Nauka": [0, 0.3], "Praca": [0, 0.5], "Kultura": [1, 1.0]}
+        prob_local = {"Nauka": [1, 0.7], "Praca": [2, 0.9], "Kultura": [1, 1.0]}
+        
+        for i in range(100):
+            a = HumanAgent(100+i, self, self.get_sample(prob_needs), self.get_sample(prob_studs))
+            self.schedule.add(a)
+            self.grid.place_agent(a, 1)
+        
+        # print(self.get_sample(prob_needs))
+        # print(self.get_sample(prob_tours))
+        # print(self.get_sample(prob_tours))
+        # print(self.get_sample(prob_tours))
+        # print(self.get_sample(prob_tours))
+        # a = HumanAgent(101, self, {"Toaleta": 60, "Jedzenie": 120}, {"Nauka": 150})
+        # b = HumanAgent(102, self, {"Toaleta": 85, "Jedzenie": 90}, {"Praca": 400})
+        # c = HumanAgent(103, self, {"Toaleta": 33, "Jedzenie": 240}, {"Nauka": 250, "Praca": 135})
+        # self.schedule.add(a)
+        # self.schedule.add(b)
+        # self.schedule.add(c)
+        # self.grid.place_agent(a, 1)
+        # self.grid.place_agent(b, 1)
+        # self.grid.place_agent(c, 1)
 
         self.running = True
         self.datacollector.collect(self)
+
+    def get_sample(self, probs):
+        ret = {}
+        for k, [m, s] in probs.items():
+            tm = int(np.clip(np.random.normal(m, s)*60, 0, 600))
+            ret[k] = tm
+        return ret
 
 
     def step(self):
@@ -103,9 +125,12 @@ class VirusModel(Model):
             self.step()
 
     def find_best_room(self, goal):
+        #print("Looking for room for", goal)
         for i, room in enumerate(self.rooms):
+            #print("Room", room, self.rooms[room]["rates"])
             if goal in self.rooms[room]["rates"]:
                 return room
+        return -1
 
 
 
@@ -128,8 +153,6 @@ class HumanAgent(Agent):
         self.current_aim = ""
         self.need_list = []
 
-    
-
     def satisfy_goals(self, room):
         need_move = True
         for rate in room.rates:
@@ -141,7 +164,10 @@ class HumanAgent(Agent):
         if need_move:
             new_goal = random.choice(list(self.goals.keys()))
             new_room = self.model.find_best_room(new_goal)
-            self.model.grid.move_agent(self, new_room)
+            if new_room >= 0:
+                self.model.grid.move_agent(self, new_room)
+            else:
+                print("Agent cant't find room to satisfy goal: ", new_goal)
     
     def satisfy_needs(self, room):
         need_move = True
@@ -152,7 +178,10 @@ class HumanAgent(Agent):
                 self.need_list.pop(0)
         else:
             new_room = self.model.find_best_room(self.need_list[0])
-            self.model.grid.move_agent(self, new_room)
+            if new_room >= 0:
+                self.model.grid.move_agent(self, new_room)
+            else:
+                print("Agent cant't find room to satisfy need: ", self.need_list[0])
 
     def update_needs(self, room):
         for need, value in self.needs.items():
@@ -171,9 +200,9 @@ class HumanAgent(Agent):
         else:
             self.satisfy_goals(current_room)
         
-        print(current_room.name)
-        print(self.goals)
-        print(self.needs)
+        #print(current_room.name)
+        #print(self.goals)
+        #print(self.needs)
             
 
 
