@@ -33,7 +33,7 @@ def network_portrayal(G):
         return G.node[source]['agent'][0], G.node[target]['agent'][0]
 
     portrayal = dict()
-    portrayal['nodes'] = [{'size': len(agents) * 2,
+    portrayal['nodes'] = [{'size': 2,
                            'color': node_color(agents[0]),
                            'tooltip': "id: {}<br>state: {}".format(agents[0].unique_id, agents[0].name),
                            }
@@ -50,11 +50,15 @@ def network_portrayal(G):
 
 
 network = NetworkModule(network_portrayal, 500, 500, library='d3')
+
 chart = ChartModule([{'Label': 'Czytelnia', 'Color': '#FF0000'},
                      {'Label': 'Kawiarnia', 'Color': '#008000'},
                      {'Label': 'Chillout', 'Color': '#808000'},
                      {'Label': 'Biuro', 'Color': '#008080'},
                      {'Label': 'Toaleta', 'Color': '#808080'}])
+
+#chart2 = ChartModule([{'Label': 'Students', 'Color': '#FF0000'},
+#                     {'Label': 'Workers', 'Color': '#008000'}])
 
 
 class MyTextElement(TextElement):
@@ -83,5 +87,5 @@ model_params = {}
 #                                                                 'resistant to this virus in the future'),
 # }
 
-server = ModularServer(VirusModel, [network, MyTextElement(), chart], 'Budynek publiczny w społeczeństwie cyfrowym', model_params)
+server = ModularServer(VirusModel, [network, chart], 'Budynek publiczny w społeczeństwie cyfrowym', model_params)
 server.port = 8521

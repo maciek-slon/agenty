@@ -47,19 +47,23 @@ class VirusModel(Model):
         self.G.add_node(2)
         self.G.add_node(3)
         self.G.add_node(4)
+        self.G.add_node(4)
         self.G.add_edge(0, 1)
-        self.G.add_edge(1, 2) 
-        self.G.add_edge(1, 3) 
+        self.G.add_edge(0, 2) 
+        self.G.add_edge(0, 3) 
+        self.G.add_edge(0, 4) 
+        self.G.add_edge(0, 5) 
         self.G.add_edge(1, 4) 
-        self.G.add_edge(3, 4) 
+        self.G.add_edge(4, 5) 
         self.grid = NetworkGrid(self.G)
 
         self.rooms = {}
-        self.rooms[0] = {"name": "Czytelnia", "rates": {"Nauka" : 2}}
-        self.rooms[1] = {"name": "Chillout",  "rates": {"Relaks": 1}}
-        self.rooms[2] = {"name": "Biuro",     "rates": {"Praca": 1.5}}
-        self.rooms[3] = {"name": "Toaleta",   "rates": {"Toaleta": 90}}
-        self.rooms[4] = {"name": "Kawiarnia", "rates": {"Jedzenie": 12, "Kultura": 0.5}}
+        self.rooms[0] = {"name": "Wejście",   "rates": {}}
+        self.rooms[1] = {"name": "Czytelnia", "rates": {"Nauka" : 2}}
+        self.rooms[2] = {"name": "Chillout",  "rates": {"Relaks": 10}}
+        self.rooms[3] = {"name": "Biuro",     "rates": {"Praca": 1.5}}
+        self.rooms[4] = {"name": "Toaleta",   "rates": {"Toaleta": 30}}
+        self.rooms[5] = {"name": "Kawiarnia", "rates": {"Jedzenie": 12, "Kultura": 0.5}}
 
         collector_dict = {}
         for i, room in enumerate(self.rooms):
@@ -78,47 +82,70 @@ class VirusModel(Model):
             self.grid.place_agent(r, node)
 
         
-        prob_needs = {"Jedzenie": [4, 0.6], "Toaleta": [2, 0.6], "Relaks": [5, 1]}
-        prob_studs = {"Nauka": [4, 2.0], "Praca": [0, 0.5], "Kultura": [0, 1.0]}
-        prob_works = {"Nauka": [0, 0.3], "Praca": [6, 1.0], "Kultura": [0, 0.2]}
-        prob_tours = {"Nauka": [0, 0.3], "Praca": [0, 0.5], "Kultura": [1, 1.0]}
-        prob_local = {"Nauka": [1, 0.7], "Praca": [2, 0.9], "Kultura": [1, 1.0]}
-        
-        for i in range(100):
-            a = HumanAgent(100+i, self, self.get_sample(prob_needs), self.get_sample(prob_studs))
-            self.schedule.add(a)
-            self.grid.place_agent(a, 1)
-        
-        # print(self.get_sample(prob_needs))
-        # print(self.get_sample(prob_tours))
-        # print(self.get_sample(prob_tours))
-        # print(self.get_sample(prob_tours))
-        # print(self.get_sample(prob_tours))
-        # a = HumanAgent(101, self, {"Toaleta": 60, "Jedzenie": 120}, {"Nauka": 150})
-        # b = HumanAgent(102, self, {"Toaleta": 85, "Jedzenie": 90}, {"Praca": 400})
-        # c = HumanAgent(103, self, {"Toaleta": 33, "Jedzenie": 240}, {"Nauka": 250, "Praca": 135})
-        # self.schedule.add(a)
-        # self.schedule.add(b)
-        # self.schedule.add(c)
-        # self.grid.place_agent(a, 1)
-        # self.grid.place_agent(b, 1)
-        # self.grid.place_agent(c, 1)
+        self.prob_needs = {"Jedzenie": [4, 0.6], "Toaleta": [2, 0.6], "Relaks": [5, 1]}
+        self.prob_studs = {"Nauka": [2, 1.5], "Praca": [0, 0.5], "Kultura": [0, 1.0]}
+        self.prob_works = {"Nauka": [0, 0.3], "Praca": [6, 1.0], "Kultura": [0, 0.2]}
+        self.prob_tours = {"Nauka": [0, 0.3], "Praca": [0, 0.5], "Kultura": [1, 1.0]}
+        self.prob_local = {"Nauka": [1, 0.7], "Praca": [2, 0.9], "Kultura": [1, 1.0]}
+
+        # godziny        0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+        self.rate_studs=[0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]
+        self.rate_works=[0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0]
+        self.rate_tours=[0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 3, 3, 3, 4, 4, 4, 6, 6, 4, 3, 2, 0, 0]
+        self.rate_local=[0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 4, 4, 2, 2, 4, 5, 6, 6, 6, 3, 0, 0, 0]
 
         self.running = True
         self.datacollector.collect(self)
 
+        self.tm = 6*60
+        self.count = 0
+
     def get_sample(self, probs):
         ret = {}
         for k, [m, s] in probs.items():
-            tm = int(np.clip(np.random.normal(m, s)*60, 0, 600))
+            tm = int(np.clip(np.random.normal(m, s)*60, 15, 600))
             ret[k] = tm
         return ret
 
 
     def step(self):
+        # prepare list for the satisfied agents
+        self.satisfied = []
+
+        # add new agents 
+        hour = int(self.tm / 60)
+        if (hour > 23):
+            hour = 0
+
+        for i in range(self.rate_studs[hour]):
+            a = HumanAgent(100+self.count, self, self.get_sample(self.prob_needs), self.get_sample(self.prob_studs))
+            self.schedule.add(a)
+            self.grid.place_agent(a, 0)
+            self.count += 1
+
+        for i in range(self.rate_works[hour]):
+            a = HumanAgent(100+self.count, self, self.get_sample(self.prob_needs), self.get_sample(self.prob_works))
+            self.schedule.add(a)
+            self.grid.place_agent(a, 0)
+            self.count += 1
+
+        # update system
         self.schedule.step()
+
         # collect data
         self.datacollector.collect(self)
+        
+        # make time step
+        self.tm = self.tm + 1
+        if (self.tm > 24*60):
+            self.tm = 0
+
+        # remove satisfied agents from the system
+        for a in self.satisfied:
+            print(a.unique_id, a.goals, "is satisfied")
+            self.grid.move_agent(a, 0)
+            self.grid._remove_agent(a, 0)
+            self.schedule.remove(a)
 
     def run_model(self, n):
         for i in range(n):
@@ -199,6 +226,15 @@ class HumanAgent(Agent):
             self.satisfy_needs(current_room)
         else:
             self.satisfy_goals(current_room)
+
+        satisfied = True
+        for goal, value in self.goals.items():
+            if value > 0:
+                satisfied = False
+                break
+
+        if satisfied:
+            self.model.satisfied.append(self)
         
         #print(current_room.name)
         #print(self.goals)
