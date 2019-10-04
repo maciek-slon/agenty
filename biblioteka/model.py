@@ -97,7 +97,7 @@ class VirusModel(Model):
         self.running = True
         self.datacollector.collect(self)
 
-        self.tm = 6*60
+        self.tm = 0*60
         self.count = 0
 
     def get_sample(self, probs):
@@ -134,10 +134,11 @@ class VirusModel(Model):
 
         # collect data
         self.datacollector.collect(self)
-        
+       
         # make time step
         self.tm = self.tm + 1
         if (self.tm > 24*60):
+            self.datacollector.get_model_vars_dataframe().to_csv("one_day.csv")
             self.tm = 0
 
         # remove satisfied agents from the system

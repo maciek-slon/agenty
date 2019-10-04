@@ -87,5 +87,5 @@ model_params = {}
 #                                                                 'resistant to this virus in the future'),
 # }
 
-server = ModularServer(VirusModel, [network, chart], 'Budynek publiczny w społeczeństwie cyfrowym', model_params)
+server = ModularServer(VirusModel, [network], 'Budynek publiczny w społeczeństwie cyfrowym', model_params)
 server.port = 8521
